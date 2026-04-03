@@ -3,7 +3,7 @@ import React from "react";
 const Footer = () => {
   return (
     <footer style={{ marginTop: "20px", padding: "20px", background: "#535bf2" }}>
-      <p>&copy; 2023 GadgetHub</p>
+      <p>&copy; 2026 GadgetHub</p>
     </footer>
   );
 };

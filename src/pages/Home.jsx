@@ -1,51 +1,68 @@
-// import React from "react";
-// import ProductCard from "../components/ProductCard";
-
-// // Sample products
-// const products = [
-//   { id: 1, name: "Smartphone X", price: 799, image: "/vite.svg" },
-//   { id: 2, name: "Laptop Pro", price: 1299, image: "/vite.svg" },
-//   { id: 3, name: "Wireless Headphones", price: 199, image: "/vite.svg" },
-// ];
-
-// const Home = () => {
-//   return (
-//     <div style={{
-//       display: "flex",
-//       justifyContent: "center",
-//       flexWrap: "wrap",
-//       gap: "20px",
-//       marginTop: "20px"
-//     }}>
-//       {products.map(product => (
-//         <ProductCard key={product.id} product={product} />
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default Home;
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
-
-// Sample products
-const products = [
-  { id: 1, name: "Smartphone X", price: 799, image: "/vite.svg" },
-  { id: 2, name: "Laptop Pro", price: 1299, image: "/vite.svg" },
-  { id: 3, name: "Wireless Headphones", price: 199, image: "/vite.svg" },
-  { id: 4, name: "Smart Watch", price: 299, image: "/vite.svg" },
-];
+import { getProducts } from "../services/productApi";
 
 const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
+      try {
+        const nextProducts = await getProducts();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProducts(nextProducts);
+        setStatus("success");
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        setError(loadError.message || "Unable to load products.");
+        setStatus("error");
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>Featured Products</h1>
-      <div className="product-grid">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      <h1 className="page-title">Featured Products</h1>
+
+      {status === "loading" && (
+        <div className="status-panel">Loading products from MongoDB...</div>
+      )}
+
+      {status === "error" && (
+        <div className="status-panel status-panel-error">{error}</div>
+      )}
+
+      {status === "success" && products.length === 0 && (
+        <div className="status-panel">
+          No products were found in the database. Add product documents in Atlas
+          or run <code>npm run seed</code>.
+        </div>
+      )}
+
+      {status === "success" && products.length > 0 && (
+        <div className="product-grid">
+          {products.map((product) => (
+            <ProductCard key={product._id || product.id} product={product} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

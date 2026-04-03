@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import ProductDetails from "./pages/ProductDetails";
 import Cart from "./pages/Cart";
 import Footer from "./components/Footer";
+import AddProduct from "./components/AddProduct";
 
 const App = () => {
   return (
@@ -16,6 +17,7 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/add" element={<AddProduct />} />
           </Routes>
         </main>
         <Footer />

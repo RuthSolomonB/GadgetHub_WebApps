@@ -4,6 +4,10 @@ import express from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { S3Client } from "@aws-sdk/client-s3"; // ADDED
+import multer from "multer"; // ADDED
+import multerS3 from "multer-s3"; // ADDED
+import { upload } from "./upload.js"; // Make sure the path matches your filename
 import connectToDatabase from "./db.js";
 import productsRouter from "./routes/products.js";
 
@@ -23,6 +27,15 @@ app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// This route accepts a single image file labeled 'image'
+app.post("/api/upload", upload.single("image"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+  // This 'location' is the public URL from S3!
+  res.json({ imageUrl: req.file.location });
 });
 
 app.use("/api/products", productsRouter);

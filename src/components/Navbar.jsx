@@ -11,6 +11,7 @@ const Navbar = () => {
         <div className="nav-links">
           <Link to="/">Home</Link>
           <Link to="/cart">Cart</Link>
+          <Link to="/add" style={{ color: "orange" }}>Add Product</Link>
         </div>
       </div>
     </nav>

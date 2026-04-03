@@ -33,4 +33,28 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
+// Add this new POST route
+router.post("/", async (req, res, next) => {
+  try {
+    const { name, price, stock, imageUrl } = req.body;
+
+    // Basic validation for your graduation project
+    if (!name || !price || !imageUrl) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    const newProduct = new Product({
+      name,
+      price: Number(price),
+      stock: Number(stock) || 0,
+      imageUrl
+    });
+
+    const savedProduct = await newProduct.save();
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

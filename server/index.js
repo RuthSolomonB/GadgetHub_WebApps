@@ -17,7 +17,8 @@ const hasFrontendBuild = fs.existsSync(indexFilePath);
 const app = express();
 const port = Number(process.env.PORT) || 5000;
 
-app.use(cors());
+// app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {

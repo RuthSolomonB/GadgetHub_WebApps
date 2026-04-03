@@ -41,6 +41,33 @@ npm run dev
 
 The Vite dev server proxies `/api` requests to `http://localhost:5000`.
 
+## AWS App Runner
+
+This repository is now set up for a single App Runner service:
+
+- `npm run build` creates the React app in `dist/`
+- `npm run start` starts Express
+- Express serves both the frontend and the `/api` routes
+- `apprunner.yaml` configures the App Runner build and run steps from the repository root
+
+### App Runner setup
+
+1. In App Runner, choose a source-code deployment from your GitHub repository.
+2. Use the repository root as the source directory so App Runner picks up `apprunner.yaml`.
+3. Add `MONGODB_URI` as a runtime environment variable or, preferably, a Secrets Manager secret.
+4. Keep the service port at App Runner's default `8080`.
+
+### Notes
+
+- The frontend uses a relative `/api` base path in production, so it works when the UI and API are served from the same App Runner service.
+- `vite.config.js` only affects local development. The Vite proxy is not used in App Runner production.
+- If you test the combined app locally, run:
+
+```bash
+npm run build
+npm run start
+```
+
 ## Environment Variables
 
 ```env

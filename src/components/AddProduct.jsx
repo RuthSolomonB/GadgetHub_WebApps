@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+
 const AddProduct = () => {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -16,7 +18,7 @@ const AddProduct = () => {
       const formData = new FormData();
       formData.append("image", file);
 
-      const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/upload`, {
+      const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -25,7 +27,7 @@ const AddProduct = () => {
       // STEP 2: Save Product to MongoDB
       const newProduct = { name, price: Number(price), stock: Number(stock), imageUrl };
 
-      const productRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/products`, {
+      const productRes = await fetch(`${API_BASE_URL}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newProduct),

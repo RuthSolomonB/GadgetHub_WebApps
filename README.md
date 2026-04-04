@@ -62,6 +62,10 @@ npm run test:e2e
 npm run load:flash-sale
 ```
 
+`npm run test:e2e` starts the Vite storefront automatically on `http://127.0.0.1:4173` before Playwright runs.
+
+`npm run load:flash-sale` prefers the `k6` CLI when it is installed. If `k6` is not on `PATH`, the repo falls back to a built-in Node runner with the same target endpoint and default concurrency profile.
+
 ## Environment variables
 
 ```env
@@ -71,6 +75,8 @@ JWT_SECRET=replace-with-a-long-random-secret
 APP_ORIGIN=http://localhost:5173
 AMPLIFY_APP_ORIGIN=https://your-app.amplifyapp.com
 VITE_API_BASE_URL=/api
+LOAD_TEST_BASE_URL=http://localhost:5000
+LOAD_TEST_TOKEN=
 AWS_REGION=us-west-2
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
@@ -84,6 +90,15 @@ SEED_MANAGER_NAME=GadgetHub Manager
 ```
 
 In App Runner, prefer IAM roles and runtime secrets over static AWS keys.
+
+Optional load-test tuning variables:
+
+```env
+LOAD_TEST_VUS=10
+LOAD_TEST_DURATION=15s
+LOAD_TEST_PAUSE_MS=1000
+LOAD_TEST_REQUEST_TIMEOUT_MS=5000
+```
 
 ## Backend API summary
 

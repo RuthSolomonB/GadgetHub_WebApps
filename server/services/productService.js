@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 import Product from "../models/Product.js";
 
 const DEFAULT_LIMIT = 12;
-const MAX_LIMIT = 24;
+const STOREFRONT_MAX_LIMIT = 24;
+const ADMIN_MAX_LIMIT = 100;
+const privilegedRoles = new Set(["product_manager", "super_admin"]);
 
 const parseNumber = (value) => {
   if (value === undefined || value === null || value === "") {
@@ -11,6 +13,27 @@ const parseNumber = (value) => {
 
   const nextValue = Number(value);
   return Number.isFinite(nextValue) ? nextValue : null;
+};
+
+const roundCurrency = (value) => Number(value.toFixed(2));
+
+export const calculateDiscountedPrice = (price, discountPercent) =>
+  roundCurrency(Math.max(price * (1 - discountPercent / 100), 0));
+
+export const deriveFlashSaleDiscountPercent = (price, flashSale) => {
+  if (flashSale?.discountPercent !== null && flashSale?.discountPercent !== undefined) {
+    return flashSale.discountPercent;
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    return null;
+  }
+
+  if (flashSale?.salePrice === null || flashSale?.salePrice === undefined) {
+    return null;
+  }
+
+  return roundCurrency(((price - flashSale.salePrice) / price) * 100);
 };
 
 export const getActiveFlashSale = (product, now = new Date()) => {
@@ -46,9 +69,86 @@ export const getActiveFlashSale = (product, now = new Date()) => {
   return flashSale;
 };
 
+export const createDisabledFlashSale = () => ({
+  enabled: false,
+  salePrice: null,
+  discountPercent: null,
+  startsAt: null,
+  endsAt: null,
+  saleStockQty: 0,
+});
+
+const parseDate = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const nextValue = new Date(value);
+  return Number.isNaN(nextValue.getTime()) ? null : nextValue;
+};
+
+export const normalizeFlashSalePayload = (input, { allowDisabled = true, basePrice } = {}) => {
+  const errors = [];
+  const enabled = allowDisabled ? Boolean(input?.enabled) : true;
+
+  if (!enabled) {
+    return {
+      flashSale: createDisabledFlashSale(),
+      errors,
+    };
+  }
+
+  let discountPercent = parseNumber(input?.discountPercent);
+  let salePrice = parseNumber(input?.salePrice);
+  const saleStockQty = parseNumber(input?.saleStockQty);
+  const startsAt = parseDate(input?.startsAt);
+  const endsAt = parseDate(input?.endsAt);
+
+  if (discountPercent !== null && (discountPercent <= 0 || discountPercent > 100)) {
+    errors.push("flashSale.discountPercent must be greater than 0 and at most 100.");
+  }
+
+  if (salePrice !== null && salePrice < 0) {
+    errors.push("flashSale.salePrice must be a valid non-negative number.");
+  }
+
+  if (discountPercent === null && salePrice === null) {
+    errors.push("flashSale.discountPercent or flashSale.salePrice must be provided when flash sale is enabled.");
+  }
+
+  if (discountPercent !== null && Number.isFinite(basePrice)) {
+    salePrice = calculateDiscountedPrice(basePrice, discountPercent);
+  }
+
+  if (discountPercent === null && salePrice !== null && Number.isFinite(basePrice) && basePrice > 0) {
+    discountPercent = deriveFlashSaleDiscountPercent(basePrice, { salePrice });
+  }
+
+  if (saleStockQty === null || saleStockQty < 0 || !Number.isInteger(saleStockQty)) {
+    errors.push("flashSale.saleStockQty must be a non-negative integer when flash sale is enabled.");
+  }
+
+  if (!startsAt || !endsAt || startsAt >= endsAt) {
+    errors.push("flashSale.startsAt and flashSale.endsAt must be valid and startsAt must be before endsAt.");
+  }
+
+  return {
+    flashSale: {
+      enabled: true,
+      salePrice,
+      discountPercent,
+      startsAt,
+      endsAt,
+      saleStockQty,
+    },
+    errors,
+  };
+};
+
 export const serializeProduct = (product, viewerRole = "guest") => {
   const source = typeof product.toObject === "function" ? product.toObject() : product;
   const flashSale = getActiveFlashSale(source);
+  const flashSaleDiscountPercent = deriveFlashSaleDiscountPercent(source.price, source.flashSale);
   const effectivePrice = flashSale ? flashSale.salePrice : source.price;
   const baseProduct = {
     ...source,
@@ -56,6 +156,7 @@ export const serializeProduct = (product, viewerRole = "guest") => {
     inStock: source.stockQty > 0 || Boolean(flashSale?.saleStockQty > 0),
     effectivePrice,
     hasActiveFlashSale: Boolean(flashSale),
+    flashSaleDiscountPercent,
     flashSaleStartsAt: flashSale?.startsAt ?? null,
     flashSaleEndsAt: flashSale?.endsAt ?? null,
   };
@@ -64,6 +165,7 @@ export const serializeProduct = (product, viewerRole = "guest") => {
     baseProduct.flashSale = {
       enabled: baseProduct.flashSale.enabled,
       salePrice: baseProduct.flashSale.salePrice,
+      discountPercent: baseProduct.flashSale.discountPercent ?? flashSaleDiscountPercent,
       startsAt: baseProduct.flashSale.startsAt,
       endsAt: baseProduct.flashSale.endsAt,
     };
@@ -85,18 +187,31 @@ const sortMap = {
   name_asc: { name: 1 },
 };
 
+const canUseAdminInventoryView = (query, viewerRole = "guest") =>
+  query.includeInactive === "true" && privilegedRoles.has(viewerRole);
+
+const buildVisibilityFilters = (query, viewerRole = "guest") => {
+  if (!canUseAdminInventoryView(query, viewerRole)) {
+    return { isActive: true };
+  }
+
+  switch (query.status) {
+    case "active":
+      return { isActive: true };
+    case "inactive":
+      return { isActive: false };
+    case "all":
+    default:
+      return {};
+  }
+};
+
 export const buildProductListOptions = (query, viewerRole = "guest") => {
   const page = Math.max(parseInt(query.page || "1", 10), 1);
-  const limit = Math.min(Math.max(parseInt(query.limit || `${DEFAULT_LIMIT}`, 10), 1), MAX_LIMIT);
+  const maxLimit = privilegedRoles.has(viewerRole) ? ADMIN_MAX_LIMIT : STOREFRONT_MAX_LIMIT;
+  const limit = Math.min(Math.max(parseInt(query.limit || `${DEFAULT_LIMIT}`, 10), 1), maxLimit);
   const sort = sortMap[query.sort] || sortMap.newest;
-  const filters = {};
-
-  if (
-    query.includeInactive !== "true" ||
-    !["product_manager", "super_admin"].includes(viewerRole)
-  ) {
-    filters.isActive = true;
-  }
+  const filters = { ...buildVisibilityFilters(query, viewerRole) };
 
   if (query.category && query.category !== "all") {
     filters.category = query.category;
@@ -133,10 +248,11 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
 
 export const listProducts = async (query, viewerRole = "guest") => {
   const { filters, page, limit, skip, sort } = buildProductListOptions(query, viewerRole);
+  const categoryFilters = buildVisibilityFilters(query, viewerRole);
   const [products, total, categories] = await Promise.all([
     Product.find(filters).sort(sort).skip(skip).limit(limit).lean(),
     Product.countDocuments(filters),
-    Product.distinct("category", { isActive: true }),
+    Product.distinct("category", categoryFilters),
   ]);
 
   return {
@@ -149,15 +265,6 @@ export const listProducts = async (query, viewerRole = "guest") => {
       categories: categories.sort((left, right) => left.localeCompare(right)),
     },
   };
-};
-
-const parseDate = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  const nextValue = new Date(value);
-  return Number.isNaN(nextValue.getTime()) ? null : nextValue;
 };
 
 export const normalizeProductPayload = (body, { partial = false } = {}) => {
@@ -210,33 +317,12 @@ export const normalizeProductPayload = (body, { partial = false } = {}) => {
   }
 
   if (body.flashSale !== undefined) {
-    const enabled = Boolean(body.flashSale?.enabled);
-    const salePrice = parseNumber(body.flashSale?.salePrice);
-    const saleStockQty = parseNumber(body.flashSale?.saleStockQty);
-    const startsAt = parseDate(body.flashSale?.startsAt);
-    const endsAt = parseDate(body.flashSale?.endsAt);
-
-    if (enabled) {
-      if (salePrice === null || salePrice < 0) {
-        errors.push("flashSale.salePrice must be provided when flash sale is enabled.");
-      }
-
-      if (saleStockQty === null || saleStockQty < 0 || !Number.isInteger(saleStockQty)) {
-        errors.push("flashSale.saleStockQty must be a non-negative integer when flash sale is enabled.");
-      }
-
-      if (!startsAt || !endsAt || startsAt >= endsAt) {
-        errors.push("flashSale.startsAt and flashSale.endsAt must be valid and startsAt must be before endsAt.");
-      }
-    }
-
-    payload.flashSale = {
-      enabled,
-      salePrice: enabled ? salePrice : null,
-      startsAt: enabled ? startsAt : null,
-      endsAt: enabled ? endsAt : null,
-      saleStockQty: enabled ? saleStockQty : 0,
-    };
+    const nextBasePrice = body.price !== undefined ? Number(body.price) : undefined;
+    const { flashSale, errors: flashSaleErrors } = normalizeFlashSalePayload(body.flashSale, {
+      basePrice: Number.isFinite(nextBasePrice) ? nextBasePrice : undefined,
+    });
+    payload.flashSale = flashSale;
+    errors.push(...flashSaleErrors);
   }
 
   if (payload.image && !/^https?:\/\/|^\//.test(payload.image)) {

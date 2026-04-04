@@ -1,13 +1,17 @@
 import express from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
+import Product from "../models/Product.js";
 import User from "../models/User.js";
+import {
+  calculateDiscountedPrice,
+  createDisabledFlashSale,
+  normalizeFlashSalePayload,
+} from "../services/productService.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { hashPassword } from "../utils/passwords.js";
 
 const router = express.Router();
-
-router.use(requireAuth, requireRoles("super_admin"));
 
 const serializeManager = (user) => ({
   id: user._id.toString(),
@@ -17,6 +21,96 @@ const serializeManager = (user) => ({
   isActive: user.isActive,
   createdAt: user.createdAt,
 });
+
+router.patch(
+  "/flash-sales",
+  requireAuth,
+  requireRoles("product_manager", "super_admin"),
+  asyncHandler(async (req, res) => {
+    const action = req.body.action;
+
+    if (!["apply", "clear"].includes(action)) {
+      return res.status(400).json({ message: 'action must be "apply" or "clear".' });
+    }
+
+    const rawProductIds = Array.isArray(req.body.productIds) ? req.body.productIds : [];
+    const invalidProductIds = rawProductIds.filter((productId) => !mongoose.isValidObjectId(productId));
+
+    if (invalidProductIds.length > 0) {
+      return res.status(400).json({ message: "productIds must contain valid product ids." });
+    }
+
+    const productIds = [...new Set(rawProductIds.map((productId) => `${productId}`))];
+    if (productIds.length === 0) {
+      return res.status(400).json({ message: "Select at least one product." });
+    }
+
+    const matchedProducts = await Product.find({
+      _id: { $in: productIds },
+      isActive: true,
+    })
+      .select("_id price")
+      .lean();
+    const matchedIds = matchedProducts.map((product) => product._id.toString());
+
+    if (matchedIds.length === 0) {
+      return res.json({
+        action,
+        matchedCount: 0,
+        updatedCount: 0,
+        updatedIds: [],
+      });
+    }
+
+    let flashSaleUpdate = createDisabledFlashSale();
+
+    if (action === "apply") {
+      const { flashSale, errors } = normalizeFlashSalePayload(req.body.flashSale, { allowDisabled: false });
+
+      if (errors.length > 0) {
+        return res.status(400).json({ message: errors.join(" ") });
+      }
+
+      flashSaleUpdate = flashSale;
+    }
+
+    let updatedCount = 0;
+
+    if (action === "apply") {
+      const bulkOperations = matchedProducts.map((product) => ({
+        updateOne: {
+          filter: { _id: product._id, isActive: true },
+          update: {
+            $set: {
+              flashSale: {
+                ...flashSaleUpdate,
+                salePrice: calculateDiscountedPrice(product.price, flashSaleUpdate.discountPercent),
+              },
+            },
+          },
+        },
+      }));
+
+      const result = await Product.bulkWrite(bulkOperations);
+      updatedCount = result.modifiedCount;
+    } else {
+      const result = await Product.updateMany(
+        { _id: { $in: matchedIds } },
+        { $set: { flashSale: flashSaleUpdate } }
+      );
+      updatedCount = result.modifiedCount;
+    }
+
+    res.json({
+      action,
+      matchedCount: matchedIds.length,
+      updatedCount,
+      updatedIds: matchedIds,
+    });
+  })
+);
+
+router.use(requireAuth, requireRoles("super_admin"));
 
 router.get(
   "/product-managers",
@@ -87,6 +181,25 @@ router.patch(
     }
 
     res.json({ user: serializeManager(manager) });
+  })
+);
+
+router.delete(
+  "/product-managers/:id",
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid user id." });
+    }
+
+    const manager = await User.findOneAndDelete({ _id: id, role: "product_manager" });
+
+    if (!manager) {
+      return res.status(404).json({ message: "Product manager not found." });
+    }
+
+    res.json({ deletedId: id });
   })
 );
 

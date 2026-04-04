@@ -11,6 +11,12 @@ const flashSaleSchema = new mongoose.Schema(
       min: 0,
       default: null,
     },
+    discountPercent: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: null,
+    },
     startsAt: {
       type: Date,
       default: null,

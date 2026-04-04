@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { CUSTOMER_CART_ONLY_MESSAGE } from "../constants/cartMessages";
 import { useAuth } from "../context/useAuth";
 import { addCartItem } from "../services/cartApi";
 import { getProductById } from "../services/productApi";
@@ -57,7 +58,7 @@ const ProductDetails = () => {
     }
 
     if (user.role !== "customer") {
-      setNotice("Only customer accounts can use the cart and checkout.");
+      setNotice(CUSTOMER_CART_ONLY_MESSAGE);
       return;
     }
 

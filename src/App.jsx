@@ -10,6 +10,7 @@ import AddProduct from "./components/AddProduct";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Orders from "./pages/Orders";
+import FlashSales from "./pages/FlashSales";
 import ManagerAccounts from "./pages/ManagerAccounts";
 
 const App = () => {
@@ -42,6 +43,14 @@ const App = () => {
               element={
                 <ProtectedRoute roles={["product_manager", "super_admin"]}>
                   <AddProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/flash-sales"
+              element={
+                <ProtectedRoute roles={["product_manager", "super_admin"]}>
+                  <FlashSales />
                 </ProtectedRoute>
               }
             />

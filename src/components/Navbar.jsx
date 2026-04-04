@@ -16,7 +16,10 @@ const Navbar = () => {
           {user?.role === "customer" && <Link to="/cart">Cart</Link>}
           {user?.role === "customer" && <Link to="/orders">Orders</Link>}
           {user && ["product_manager", "super_admin"].includes(user.role) && (
-            <Link to="/admin/products">Manage Products</Link>
+            <>
+              <Link to="/admin/products">Manage Products</Link>
+              <Link to="/admin/flash-sales">Flash Sales</Link>
+            </>
           )}
           {user?.role === "super_admin" && <Link to="/admin/managers">Managers</Link>}
           {!user && status !== "loading" && <Link to="/login">Login</Link>}

@@ -6,8 +6,6 @@ build:
     pre-build:
       - npm ci
     build:
-      - npm run build
-    post-build:
       - npm prune --omit=dev
 
 run:

@@ -6,8 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // "/api": "http://localhost:5000",
-      "/api": "https://3jz9bj8avk.us-west-2.awsapprunner.com/api",
+      "/api": "http://localhost:5000",
     },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.js"],
+    exclude: ["tests/e2e/**", "node_modules/**"],
   },
 });

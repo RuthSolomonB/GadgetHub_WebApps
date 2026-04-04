@@ -13,14 +13,20 @@
     "seed": "node server/seed.js",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "load:flash-sale": "k6 run load-tests/flash-sale-checkout.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
     "@aws-sdk/lib-storage": "^3.1024.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
@@ -29,7 +35,11 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@eslint/js": "^9.39.1",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -37,6 +47,10 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "^7.3.1"
+    "jsdom": "^26.1.0",
+    "mongodb-memory-server": "^10.2.0",
+    "supertest": "^7.1.4",
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
   }
 }

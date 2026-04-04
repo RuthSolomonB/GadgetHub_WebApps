@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
+import { useAuth } from "../context/useAuth";
+import { getCart } from "../services/cartApi";
 import { getProducts } from "../services/productApi";
 
 const Home = () => {
+  const { token, user } = useAuth();
   const [products, setProducts] = useState([]);
+  const [cartQuantities, setCartQuantities] = useState({});
   const [meta, setMeta] = useState({ categories: [], page: 1, pages: 1 });
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -47,11 +51,53 @@ const Home = () => {
     };
   }, [filters]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCart = async () => {
+      if (user?.role !== "customer" || !token) {
+        setCartQuantities({});
+        return;
+      }
+
+      try {
+        const response = await getCart(token);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCartQuantities(
+          Object.fromEntries(response.items.map((item) => [item.productId, item.quantity]))
+        );
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setCartQuantities({});
+      }
+    };
+
+    loadCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, user]);
+
   const updateFilter = (name, value) => {
     setFilters((current) => ({
       ...current,
       [name]: value,
       page: name === "page" ? value : 1,
+    }));
+  };
+
+  const handleProductQuickAdd = (productId) => {
+    setCartQuantities((current) => ({
+      ...current,
+      [productId]: (current[productId] || 0) + 1,
     }));
   };
 
@@ -132,7 +178,12 @@ const Home = () => {
         <>
           <div className="product-grid">
             {products.map((product) => (
-              <ProductCard key={product._id || product.id} product={product} />
+              <ProductCard
+                key={product._id || product.id}
+                product={product}
+                cartQuantity={cartQuantities[product.id || product._id] || 0}
+                onAddedToCart={handleProductQuickAdd}
+              />
             ))}
           </div>
 

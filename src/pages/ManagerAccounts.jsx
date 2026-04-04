@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { createProductManager, getProductManagers, updateProductManager } from "../services/adminApi";
+import {
+  createProductManager,
+  deleteProductManager,
+  getProductManagers,
+  updateProductManager,
+} from "../services/adminApi";
 import { useAuth } from "../context/useAuth";
 
 const initialForm = {
@@ -64,6 +69,24 @@ const ManagerAccounts = () => {
     }
   };
 
+  const handleDeleteManager = async (manager) => {
+    if (!window.confirm(`Delete manager account for ${manager.displayName}?`)) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await deleteProductManager(token, manager.id);
+      await loadManagers();
+    } catch (deleteError) {
+      setError(deleteError.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section className="stack-page">
       <div className="section-heading">
@@ -123,9 +146,14 @@ const ManagerAccounts = () => {
                   <strong>{manager.displayName}</strong>
                   <p>{manager.email}</p>
                 </div>
-                <button className="secondary-btn" onClick={() => handleToggleManager(manager)} type="button">
-                  {manager.isActive ? "Deactivate" : "Reactivate"}
-                </button>
+                <div className="button-row">
+                  <button className="secondary-btn" onClick={() => handleToggleManager(manager)} type="button">
+                    {manager.isActive ? "Deactivate" : "Reactivate"}
+                  </button>
+                  <button className="secondary-btn danger-btn" onClick={() => handleDeleteManager(manager)} type="button">
+                    Delete
+                  </button>
+                </div>
               </article>
             ))}
           </div>

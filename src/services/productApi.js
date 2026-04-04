@@ -11,6 +11,9 @@ export const createProduct = (token, body) =>
 export const updateProduct = (token, id, body) =>
   apiRequest(`/products/${id}`, { method: "PATCH", token, body });
 
+export const deleteProduct = (token, id) =>
+  apiRequest(`/products/${id}`, { method: "DELETE", token });
+
 export const uploadProductImage = (token, file) => {
   const body = new FormData();
   body.append("image", file);

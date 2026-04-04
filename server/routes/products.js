@@ -1,5 +1,6 @@
 import express from "express";
 import { attachOptionalUser, requireAuth, requireRoles } from "../middleware/auth.js";
+import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import {
@@ -85,6 +86,29 @@ router.patch(
     }
 
     res.json(serializeProduct(product, req.user.role));
+  })
+);
+
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRoles("product_manager", "super_admin"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (!ensureValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid product id." });
+    }
+
+    const product = await Product.findByIdAndDelete(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    await Cart.updateMany({}, { $pull: { items: { productId: product._id } } });
+
+    res.json({ deletedId: id });
   })
 );
 

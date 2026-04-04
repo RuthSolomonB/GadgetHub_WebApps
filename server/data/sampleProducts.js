@@ -33,6 +33,7 @@ const sampleProducts = catalogBlueprint.flatMap((blueprint, categoryIndex) =>
         `${blueprint.prefix} ${variant}`
       )}`,
       category: blueprint.category,
+      sku: `GH-${seedId}-${variant.toUpperCase()}`,
       stockQty,
       isActive: true,
       flashSale: hasFlashSale
@@ -50,7 +51,6 @@ const sampleProducts = catalogBlueprint.flatMap((blueprint, categoryIndex) =>
             endsAt: null,
             saleStockQty: 0,
           },
-      sku: `GH-${seedId}-${variant.toUpperCase()}`,
     };
   })
 );

@@ -217,6 +217,10 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
     filters.category = query.category;
   }
 
+  if (query.sku?.trim()) {
+    filters.sku = query.sku.trim().toUpperCase();
+  }
+
   const minPrice = parseNumber(query.minPrice);
   const maxPrice = parseNumber(query.maxPrice);
 
@@ -288,6 +292,16 @@ export const normalizeProductPayload = (body, { partial = false } = {}) => {
 
   if (body.category !== undefined) {
     payload.category = `${body.category}`.trim();
+  }
+
+  if (body.sku !== undefined) {
+    const sku = `${body.sku}`.trim().toUpperCase();
+
+    if (!sku) {
+      errors.push("sku must not be empty.");
+    } else {
+      payload.sku = sku;
+    }
   }
 
   if (body.image !== undefined) {

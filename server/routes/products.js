@@ -36,18 +36,19 @@ router.get("/:id", async (req, res, next) => {
 // Add this new POST route
 router.post("/", async (req, res, next) => {
   try {
-    const { name, price, stock, imageUrl } = req.body;
+    const { name, price, stock, image, imageUrl } = req.body;
+    const productImage = image || imageUrl;
 
     // Basic validation for your graduation project
-    if (!name || !price || !imageUrl) {
+    if (!name || price === undefined || !productImage) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
     const newProduct = new Product({
       name,
       price: Number(price),
-      stock: Number(stock) || 0,
-      imageUrl
+      image: productImage,
+      inStock: Number(stock) > 0,
     });
 
     const savedProduct = await newProduct.save();

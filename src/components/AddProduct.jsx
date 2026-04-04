@@ -25,7 +25,12 @@ const AddProduct = () => {
       const { imageUrl } = await uploadRes.json();
 
       // STEP 2: Save Product to MongoDB
-      const newProduct = { name, price: Number(price), stock: Number(stock), imageUrl };
+      const newProduct = {
+        name,
+        price: Number(price),
+        stock: Number(stock),
+        image: imageUrl,
+      };
 
       const productRes = await fetch(`${API_BASE_URL}/products`, {
         method: "POST",

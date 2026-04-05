@@ -43,6 +43,7 @@ describe("product routes", () => {
         name: "Atlas Laptop Air",
         description: "Portable performance machine",
         category: "Computers",
+        sku: "GH-TEST-ATLAS-AIR",
         price: 999,
         stockQty: 8,
         image: "/atlas-air.png",
@@ -51,6 +52,7 @@ describe("product routes", () => {
         name: "Pulse Audio Core",
         description: "Portable speaker",
         category: "Audio",
+        sku: "GH-TEST-PULSE-CORE",
         price: 199,
         stockQty: 14,
         image: "/pulse-core.png",
@@ -66,6 +68,37 @@ describe("product routes", () => {
     expect(response.body.items).toHaveLength(1);
     expect(response.body.items[0].name).toContain("Atlas Laptop");
     expect(response.body.meta.categories).toContain("Audio");
+  });
+
+  it("supports exact sku filtering for staging load-test targeting", async () => {
+    await Product.create([
+      {
+        name: "Atlas Laptop Air",
+        description: "Portable performance machine",
+        category: "Computers",
+        sku: "GH-TARGET-SKU",
+        price: 999,
+        stockQty: 8,
+        image: "/atlas-air.png",
+      },
+      {
+        name: "Pulse Audio Core",
+        description: "Portable speaker",
+        category: "Audio",
+        sku: "GH-OTHER-SKU",
+        price: 199,
+        stockQty: 14,
+        image: "/pulse-core.png",
+      },
+    ]);
+
+    const response = await request(app).get("/api/products").query({
+      sku: "gh-target-sku",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].sku).toBe("GH-TARGET-SKU");
   });
 
   it("allows product managers to create products and blocks guests", async () => {

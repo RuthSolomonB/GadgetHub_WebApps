@@ -4,14 +4,26 @@ import connectToDatabase from "./db.js";
 import User from "./models/User.js";
 import Product from "./models/Product.js";
 import sampleProducts from "./data/sampleProducts.js";
+import { buildLoadTestProduct, DEFAULT_LOAD_TEST_PRODUCT_SKU } from "./data/loadTestProduct.js";
 import { hashPassword } from "./utils/passwords.js";
 
 const seedDatabase = async () => {
   await connectToDatabase();
 
-  const operations = sampleProducts.map((product) => ({
+  const shouldSeedLoadTestProduct = process.env.SEED_LOAD_TEST_PRODUCT === "true";
+  const loadTestProductSku =
+    (process.env.LOAD_TEST_PRODUCT_SKU || DEFAULT_LOAD_TEST_PRODUCT_SKU).trim().toUpperCase();
+  const productsToSeed = shouldSeedLoadTestProduct
+    ? [...sampleProducts, buildLoadTestProduct({ sku: loadTestProductSku })]
+    : sampleProducts;
+
+  const operations = productsToSeed.map((product) => ({
     updateOne: {
-      filter: { name: product.name, category: product.category },
+      filter: product.sku
+        ? {
+            $or: [{ sku: product.sku }, { name: product.name, category: product.category }],
+          }
+        : { name: product.name, category: product.category },
       update: { $set: product },
       upsert: true,
     },
@@ -54,7 +66,13 @@ const seedDatabase = async () => {
     );
   }
 
-  console.log(`Seeded ${operations.length} products and ${bootstrapUsers.length} privileged users.`);
+  console.log(
+    `Seeded ${operations.length} products and ${bootstrapUsers.length} privileged users.`
+  );
+
+  if (shouldSeedLoadTestProduct) {
+    console.log(`Staging load-test product ready with SKU ${loadTestProductSku}.`);
+  }
 };
 
 seedDatabase()

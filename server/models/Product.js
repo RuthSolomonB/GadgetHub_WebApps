@@ -70,6 +70,13 @@ const productSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    sku: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      index: true,
+      sparse: true,
+    },
     isActive: {
       type: Boolean,
       default: true,

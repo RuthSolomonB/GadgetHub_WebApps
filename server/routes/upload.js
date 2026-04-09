@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { upload } from "../upload.js";
+import { buildS3ObjectUrl, upload } from "../upload.js";
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ router.post(
       });
     }
 
-    res.json({ imageUrl: req.file.location });
+    res.json({ imageUrl: buildS3ObjectUrl(req.file.key) });
   })
 );
 

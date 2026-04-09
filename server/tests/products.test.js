@@ -101,6 +101,56 @@ describe("product routes", () => {
     expect(response.body.items[0].sku).toBe("GH-TARGET-SKU");
   });
 
+  it("supports filtering to active flash-sale products only", async () => {
+    const now = Date.now();
+
+    await Product.create([
+      {
+        name: "Atlas Laptop Air",
+        description: "Portable performance machine",
+        category: "Computers",
+        sku: "GH-FLASH-SALE-ATLAS",
+        price: 999,
+        stockQty: 8,
+        image: "/atlas-air.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 799,
+          discountPercent: 20,
+          startsAt: new Date(now - 1000 * 60),
+          endsAt: new Date(now + 1000 * 60 * 60),
+          saleStockQty: 4,
+        },
+      },
+      {
+        name: "Pulse Audio Core",
+        description: "Portable speaker",
+        category: "Audio",
+        sku: "GH-FLASH-SALE-PULSE",
+        price: 199,
+        stockQty: 14,
+        image: "/pulse-core.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 149,
+          discountPercent: 25,
+          startsAt: new Date(now + 1000 * 60),
+          endsAt: new Date(now + 1000 * 60 * 60),
+          saleStockQty: 3,
+        },
+      },
+    ]);
+
+    const response = await request(app).get("/api/products").query({
+      hasFlashSale: "true",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].name).toBe("Atlas Laptop Air");
+    expect(response.body.items[0].hasActiveFlashSale).toBe(true);
+  });
+
   it("allows product managers to create products and blocks guests", async () => {
     const { token } = await createManager();
     const payload = {

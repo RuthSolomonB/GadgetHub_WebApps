@@ -22,7 +22,7 @@ GadgetHub is a split-deployment MERN storefront:
 1. Create `.env` from `.env.example`.
 2. Add a valid Atlas connection string to `MONGODB_URI`.
 3. Add a `JWT_SECRET`.
-4. If you want S3 uploads locally, also provide `AWS_REGION`, `S3_BUCKET_NAME`, and either local AWS keys or an AWS profile.
+4. Provide `AWS_REGION` and `S3_BUCKET_NAME` so seeded product images and manager uploads can be stored in S3. For local development, also provide either local AWS keys or an AWS profile.
 5. Install dependencies:
 
 ```bash
@@ -86,6 +86,7 @@ AWS_REGION=us-west-2
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 S3_BUCKET_NAME=
+S3_PUBLIC_BASE_URL=
 SEED_SUPER_ADMIN_EMAIL=admin@gadgethub.local
 SEED_SUPER_ADMIN_PASSWORD=ChangeMe123!
 SEED_SUPER_ADMIN_NAME=GadgetHub Admin
@@ -94,7 +95,7 @@ SEED_MANAGER_PASSWORD=ChangeMe123!
 SEED_MANAGER_NAME=GadgetHub Manager
 ```
 
-In App Runner, prefer IAM roles and runtime secrets over static AWS keys.
+In App Runner, prefer IAM roles and runtime secrets over static AWS keys. Set `S3_PUBLIC_BASE_URL` only when product images should be served through CloudFront or another public asset domain instead of direct S3 object URLs.
 
 Optional load-test tuning variables:
 

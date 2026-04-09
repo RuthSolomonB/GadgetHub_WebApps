@@ -151,6 +151,68 @@ describe("product routes", () => {
     expect(response.body.items[0].hasActiveFlashSale).toBe(true);
   });
 
+  it("supports ending-soon sorting for active flash-sale products", async () => {
+    const now = Date.now();
+
+    await Product.create([
+      {
+        name: "Nova Phone Prime",
+        description: "Flagship phone",
+        category: "Phones",
+        sku: "GH-ENDING-SOON-NOVA",
+        price: 899,
+        stockQty: 12,
+        image: "/nova-prime.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 749,
+          discountPercent: 16.69,
+          startsAt: new Date(now - 1000 * 60 * 60),
+          endsAt: new Date(now + 1000 * 60 * 30),
+          saleStockQty: 5,
+        },
+      },
+      {
+        name: "Atlas Laptop Air",
+        description: "Portable performance machine",
+        category: "Computers",
+        sku: "GH-ENDING-SOON-ATLAS",
+        price: 999,
+        stockQty: 8,
+        image: "/atlas-air.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 799,
+          discountPercent: 20,
+          startsAt: new Date(now - 1000 * 60 * 60),
+          endsAt: new Date(now + 1000 * 60 * 90),
+          saleStockQty: 4,
+        },
+      },
+      {
+        name: "Pulse Audio Core",
+        description: "Portable speaker",
+        category: "Audio",
+        sku: "GH-ENDING-SOON-PULSE",
+        price: 199,
+        stockQty: 14,
+        image: "/pulse-core.png",
+      },
+    ]);
+
+    const response = await request(app).get("/api/products").query({
+      sort: "ending_soon",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(2);
+    expect(response.body.items.map((product) => product.name)).toEqual([
+      "Nova Phone Prime",
+      "Atlas Laptop Air",
+    ]);
+    expect(response.body.items.every((product) => product.hasActiveFlashSale)).toBe(true);
+  });
+
   it("allows product managers to create products and blocks guests", async () => {
     const { token } = await createManager();
     const payload = {

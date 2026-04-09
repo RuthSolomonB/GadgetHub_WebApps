@@ -182,6 +182,7 @@ export const serializeProduct = (product, viewerRole = "guest") => {
 
 const sortMap = {
   newest: { createdAt: -1 },
+  ending_soon: { "flashSale.endsAt": 1, createdAt: -1 },
   price_asc: { price: 1 },
   price_desc: { price: -1 },
   name_asc: { name: 1 },
@@ -220,12 +221,13 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
   const limit = Math.min(Math.max(parseInt(query.limit || `${DEFAULT_LIMIT}`, 10), 1), maxLimit);
   const sort = sortMap[query.sort] || sortMap.newest;
   const filters = { ...buildVisibilityFilters(query, viewerRole) };
+  const flashSaleOnlyMode = query.hasFlashSale === "true" || query.sort === "ending_soon";
 
   if (query.category && query.category !== "all") {
     filters.category = query.category;
   }
 
-  if (query.hasFlashSale === "true") {
+  if (flashSaleOnlyMode) {
     Object.assign(filters, buildActiveFlashSaleFilters());
   }
 

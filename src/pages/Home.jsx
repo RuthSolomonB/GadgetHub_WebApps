@@ -16,6 +16,7 @@ const Home = () => {
     category: "all",
     minPrice: "",
     maxPrice: "",
+    hasFlashSale: false,
     sort: "newest",
     page: 1,
   });
@@ -156,6 +157,14 @@ const Home = () => {
             <option value="price_desc">Price: High to low</option>
             <option value="name_asc">Name</option>
           </select>
+        </label>
+        <label className="field checkbox-field">
+          <span>Flash sale only</span>
+          <input
+            checked={filters.hasFlashSale}
+            onChange={(event) => updateFilter("hasFlashSale", event.target.checked)}
+            type="checkbox"
+          />
         </label>
       </section>
 

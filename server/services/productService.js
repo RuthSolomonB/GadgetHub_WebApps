@@ -190,6 +190,14 @@ const sortMap = {
 const canUseAdminInventoryView = (query, viewerRole = "guest") =>
   query.includeInactive === "true" && privilegedRoles.has(viewerRole);
 
+const buildActiveFlashSaleFilters = (now = new Date()) => ({
+  "flashSale.enabled": true,
+  "flashSale.salePrice": { $ne: null },
+  "flashSale.startsAt": { $lte: now },
+  "flashSale.endsAt": { $gte: now },
+  "flashSale.saleStockQty": { $gt: 0 },
+});
+
 const buildVisibilityFilters = (query, viewerRole = "guest") => {
   if (!canUseAdminInventoryView(query, viewerRole)) {
     return { isActive: true };
@@ -215,6 +223,10 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
 
   if (query.category && query.category !== "all") {
     filters.category = query.category;
+  }
+
+  if (query.hasFlashSale === "true") {
+    Object.assign(filters, buildActiveFlashSaleFilters());
   }
 
   if (query.sku?.trim()) {

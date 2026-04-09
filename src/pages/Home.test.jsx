@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./Home";
@@ -16,6 +17,8 @@ vi.mock("../services/cartApi", () => ({
 
 describe("Home page", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+
     vi.mocked(productApi.getProducts).mockResolvedValue({
       items: [
         {
@@ -63,5 +66,42 @@ describe("Home page", () => {
     });
 
     expect(productApi.getProducts).toHaveBeenCalled();
+  });
+
+  it("requests flash-sale-only products when the checkbox is enabled", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AuthContext.Provider
+        value={{
+          token: null,
+          user: null,
+          status: "guest",
+          login: vi.fn(),
+          register: vi.fn(),
+          logout: vi.fn(),
+          isAuthenticated: false,
+        }}
+      >
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(productApi.getProducts).toHaveBeenCalledTimes(1);
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: /flash sale only/i }));
+
+    await waitFor(() => {
+      expect(productApi.getProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          hasFlashSale: true,
+          page: 1,
+        })
+      );
+    });
   });
 });

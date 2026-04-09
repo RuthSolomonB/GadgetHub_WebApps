@@ -201,6 +201,12 @@ textarea {
   letter-spacing: -0.05em;
 }
 
+.section-title {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.2vw, 2.1rem);
+  letter-spacing: -0.04em;
+}
+
 .panel,
 .status-panel,
 .product-card,
@@ -284,12 +290,43 @@ textarea {
   resize: vertical;
 }
 
+.catalog-section {
+  scroll-margin-top: calc(var(--nav-height) + 1rem);
+}
+
 .checkbox-field {
   justify-content: flex-end;
 }
 
 .checkbox-field input {
   width: auto;
+}
+
+.storefront-toggle-field {
+  min-width: 0;
+}
+
+.storefront-toggle-control {
+  width: 100%;
+  min-height: 53px;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.storefront-toggle-control input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.storefront-toggle-control span {
+  color: var(--text-primary);
 }
 
 .product-grid {
@@ -397,6 +434,101 @@ textarea {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
+}
+
+.flash-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.flash-spotlight-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.flash-spotlight-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(var(--flash-spotlight-columns, 4), minmax(0, 1fr));
+}
+
+.flash-spotlight-card,
+.flash-spotlight-cta {
+  min-width: 0;
+  min-height: 100%;
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.14), transparent 10rem),
+    rgba(15, 23, 42, 0.58);
+}
+
+.flash-spotlight-cta {
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 10rem),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(17, 24, 39, 0.92));
+}
+
+.flash-spotlight-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.flash-spotlight-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.flash-spotlight-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.flash-spotlight-chip {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.14);
+  color: #bae6fd;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.flash-spotlight-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.flash-spotlight-meta {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.flash-spotlight-price-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.flash-spotlight-action {
+  width: 100%;
+  margin-top: auto;
 }
 
 .product-details-card {

@@ -213,6 +213,123 @@ describe("product routes", () => {
     expect(response.body.items.every((product) => product.hasActiveFlashSale)).toBe(true);
   });
 
+  it("sorts storefront price order using the active flash-sale price", async () => {
+    const now = Date.now();
+
+    await Product.create([
+      {
+        name: "Atlas Laptop Air",
+        description: "Portable performance machine",
+        category: "Computers",
+        sku: "GH-PRICE-SORT-ATLAS",
+        price: 1000,
+        stockQty: 8,
+        image: "/atlas-air.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 120,
+          discountPercent: 88,
+          startsAt: new Date(now - 1000 * 60 * 60),
+          endsAt: new Date(now + 1000 * 60 * 60),
+          saleStockQty: 4,
+        },
+      },
+      {
+        name: "Nova Phone Prime",
+        description: "Flagship phone",
+        category: "Phones",
+        sku: "GH-PRICE-SORT-NOVA",
+        price: 200,
+        stockQty: 12,
+        image: "/nova-prime.png",
+      },
+      {
+        name: "Pulse Audio Core",
+        description: "Portable speaker",
+        category: "Audio",
+        sku: "GH-PRICE-SORT-PULSE",
+        price: 150,
+        stockQty: 10,
+        image: "/pulse-core.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 75,
+          discountPercent: 50,
+          startsAt: new Date(now + 1000 * 60 * 60),
+          endsAt: new Date(now + 1000 * 60 * 120),
+          saleStockQty: 3,
+        },
+      },
+    ]);
+
+    const response = await request(app).get("/api/products").query({
+      sort: "price_asc",
+      limit: 24,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items.map((product) => product.name)).toEqual([
+      "Atlas Laptop Air",
+      "Pulse Audio Core",
+      "Nova Phone Prime",
+    ]);
+    expect(response.body.items[0].effectivePrice).toBe(120);
+    expect(response.body.items[1].effectivePrice).toBe(150);
+  });
+
+  it("filters storefront min and max price using the active flash-sale price", async () => {
+    const now = Date.now();
+
+    await Product.create([
+      {
+        name: "Atlas Laptop Air",
+        description: "Portable performance machine",
+        category: "Computers",
+        sku: "GH-PRICE-FILTER-ATLAS",
+        price: 1000,
+        stockQty: 8,
+        image: "/atlas-air.png",
+        flashSale: {
+          enabled: true,
+          salePrice: 699,
+          discountPercent: 30.1,
+          startsAt: new Date(now - 1000 * 60 * 60),
+          endsAt: new Date(now + 1000 * 60 * 60),
+          saleStockQty: 4,
+        },
+      },
+      {
+        name: "Nova Phone Prime",
+        description: "Flagship phone",
+        category: "Phones",
+        sku: "GH-PRICE-FILTER-NOVA",
+        price: 750,
+        stockQty: 12,
+        image: "/nova-prime.png",
+      },
+      {
+        name: "Pulse Audio Core",
+        description: "Portable speaker",
+        category: "Audio",
+        sku: "GH-PRICE-FILTER-PULSE",
+        price: 650,
+        stockQty: 10,
+        image: "/pulse-core.png",
+      },
+    ]);
+
+    const response = await request(app).get("/api/products").query({
+      minPrice: 680,
+      maxPrice: 720,
+      limit: 24,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].name).toBe("Atlas Laptop Air");
+    expect(response.body.items[0].effectivePrice).toBe(699);
+  });
+
   it("allows product managers to create products and blocks guests", async () => {
     const { token } = await createManager();
     const payload = {

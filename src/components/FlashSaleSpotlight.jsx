@@ -14,24 +14,21 @@ const formatDiscountPercent = (value) => {
   return Number.isInteger(roundedValue) ? `${roundedValue}% off` : `${roundedValue.toFixed(2)}% off`;
 };
 
-const FlashSaleSpotlight = ({ containerRef, products, slotCount, onViewAll }) => {
-  const columnCount = Math.max(2, Math.min(slotCount, products.length + 1));
-
+const FlashSaleSpotlight = ({ products, onViewAll }) => {
   return (
-    <section
-      className="panel flash-spotlight"
-      ref={containerRef}
-      style={{ "--flash-spotlight-columns": columnCount }}
-    >
-      <div className="flash-spotlight-heading">
+    <section className="panel stack-page">
+      <div className="section-heading">
         <div>
           <p className="eyebrow">Flash Sales</p>
           <h2 className="section-title">Ending soon</h2>
-          <p className="panel-copy">Catch the fastest-expiring deals before they disappear.</p>
+          <p className="panel-copy">A quick look at the live deals before you browse the full catalog.</p>
         </div>
+        <button className="secondary-btn" onClick={onViewAll} type="button">
+          See all deals
+        </button>
       </div>
 
-      <div className="flash-spotlight-grid">
+      <div className="product-grid">
         {products.map((product) => {
           const productId = product._id || product.id;
           const discountText = formatDiscountPercent(product.flashSaleDiscountPercent);
@@ -42,44 +39,29 @@ const FlashSaleSpotlight = ({ containerRef, products, slotCount, onViewAll }) =>
               : null;
 
           return (
-            <article className="flash-spotlight-card" key={productId}>
-              <img alt={product.name} className="flash-spotlight-image" src={product.image} />
-              <div className="flash-spotlight-copy">
-                <div className="flash-spotlight-chip-row">
-                  <span className="card-badge">Flash Sale</span>
-                  {discountText && <span className="flash-spotlight-chip">{discountText}</span>}
-                </div>
-                <h3 className="flash-spotlight-title">{product.name}</h3>
-                <p className="flash-spotlight-meta">{product.category}</p>
-                <div className="flash-spotlight-price-group">
-                  <p className="card-price">{salePrice}</p>
-                  {originalPrice && <p className="card-price-muted">{originalPrice}</p>}
-                </div>
-                {product.flashSaleEndsAt && (
-                  <p className="flash-spotlight-meta">
-                    Ends {new Date(product.flashSaleEndsAt).toLocaleString()}
-                  </p>
-                )}
+            <article className="product-card" key={productId}>
+              <img alt={product.name} className="card-image flash-spotlight-image" src={product.image} />
+              <div className="button-row">
+                <span className="card-badge">Flash Sale</span>
+                {discountText && <span className="pill pill-info">{discountText}</span>}
               </div>
-              <Link className="view-btn flash-spotlight-action" to={`/product/${productId}`}>
-                View details
-              </Link>
+              <h3 className="card-title">{product.name}</h3>
+              <p className="card-meta">{product.category}</p>
+              <div className="card-price-group">
+                <p className="card-price">{salePrice}</p>
+                {originalPrice && <p className="card-price-muted">{originalPrice}</p>}
+              </div>
+              {product.flashSaleEndsAt && (
+                <p className="card-meta">Ends {new Date(product.flashSaleEndsAt).toLocaleString()}</p>
+              )}
+              <div className="card-action-row">
+                <Link className="view-btn card-action-btn" to={`/product/${productId}`}>
+                  View details
+                </Link>
+              </div>
             </article>
           );
         })}
-
-        <article className="flash-spotlight-cta">
-          <div className="flash-spotlight-copy">
-            <p className="eyebrow">Explore</p>
-            <h3 className="flash-spotlight-title">View all flash sales</h3>
-            <p className="flash-spotlight-meta">
-              Filter the full catalog to the live deals and jump straight into the main list.
-            </p>
-          </div>
-          <button className="primary-btn flash-spotlight-action" onClick={onViewAll} type="button">
-            See all deals
-          </button>
-        </article>
       </div>
     </section>
   );

@@ -5,29 +5,6 @@ import { useAuth } from "../context/useAuth";
 import { getCart } from "../services/cartApi";
 import { getProducts } from "../services/productApi";
 
-const DEFAULT_SPOTLIGHT_SLOTS = 4;
-const MIN_SPOTLIGHT_SLOTS = 2;
-const MAX_SPOTLIGHT_SLOTS = 5;
-const SPOTLIGHT_CARD_WIDTH = 240;
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
-const calculateSpotlightSlots = (width) => {
-  if (!Number.isFinite(width) || width <= 0) {
-    return DEFAULT_SPOTLIGHT_SLOTS;
-  }
-
-  return clamp(Math.floor(width / SPOTLIGHT_CARD_WIDTH), MIN_SPOTLIGHT_SLOTS, MAX_SPOTLIGHT_SLOTS);
-};
-
-const getInitialSpotlightSlots = () => {
-  if (typeof window === "undefined") {
-    return DEFAULT_SPOTLIGHT_SLOTS;
-  }
-
-  return calculateSpotlightSlots(window.innerWidth);
-};
-
 const Home = () => {
   const { token, user } = useAuth();
   const [products, setProducts] = useState([]);
@@ -36,7 +13,7 @@ const Home = () => {
   const [meta, setMeta] = useState({ categories: [], page: 1, pages: 1 });
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
-  const [spotlightSlots, setSpotlightSlots] = useState(getInitialSpotlightSlots);
+  const catalogSectionRef = useRef(null);
   const [filters, setFilters] = useState({
     search: "",
     category: "all",
@@ -46,13 +23,14 @@ const Home = () => {
     sort: "newest",
     page: 1,
   });
-  const productListRef = useRef(null);
-  const spotlightContainerRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadProducts = async () => {
+      setStatus("loading");
+      setError("");
+
       try {
         const response = await getProducts(filters);
 
@@ -89,7 +67,7 @@ const Home = () => {
           hasFlashSale: true,
           sort: "ending_soon",
           page: 1,
-          limit: Math.max(spotlightSlots - 1, 1),
+          limit: 3,
         });
 
         if (!isMounted) {
@@ -111,7 +89,7 @@ const Home = () => {
     return () => {
       isMounted = false;
     };
-  }, [spotlightSlots]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,39 +126,7 @@ const Home = () => {
     };
   }, [token, user]);
 
-  useEffect(() => {
-    const container = spotlightContainerRef.current;
-
-    if (!container || typeof ResizeObserver === "undefined") {
-      return undefined;
-    }
-
-    const updateSlotCount = (width) => {
-      setSpotlightSlots((current) => {
-        const nextValue = calculateSpotlightSlots(width);
-        return current === nextValue ? current : nextValue;
-      });
-    };
-
-    updateSlotCount(container.clientWidth || window.innerWidth);
-
-    const observer = new ResizeObserver((entries) => {
-      const nextWidth = entries[0]?.contentRect?.width || container.clientWidth || window.innerWidth;
-      updateSlotCount(nextWidth);
-    });
-
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [spotlightProducts.length]);
-
-  const scrollToProductList = () => {
-    productListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const updateFilter = (name, value, { scroll = false } = {}) => {
+  const updateFilter = (name, value) => {
     setFilters((current) => {
       const nextFilters = {
         ...current,
@@ -190,27 +136,16 @@ const Home = () => {
 
       if (name === "hasFlashSale") {
         nextFilters.hasFlashSale = value;
-        nextFilters.sort = value
-          ? "ending_soon"
-          : current.sort === "ending_soon"
-            ? "newest"
-            : current.sort;
+        nextFilters.sort = value ? "ending_soon" : current.sort === "ending_soon" ? "newest" : current.sort;
       }
 
       if (name === "sort") {
         nextFilters.sort = value;
-
-        if (value === "ending_soon") {
-          nextFilters.hasFlashSale = true;
-        }
+        nextFilters.hasFlashSale = value === "ending_soon" ? true : current.hasFlashSale;
       }
 
       return nextFilters;
     });
-
-    if (scroll) {
-      scrollToProductList();
-    }
   };
 
   const handleProductQuickAdd = (productId) => {
@@ -221,11 +156,12 @@ const Home = () => {
   };
 
   const handleFlashSaleToggle = (event) => {
-    updateFilter("hasFlashSale", event.target.checked, { scroll: event.target.checked });
+    updateFilter("hasFlashSale", event.target.checked);
   };
 
   const handleViewAllFlashSales = () => {
-    updateFilter("hasFlashSale", true, { scroll: true });
+    updateFilter("hasFlashSale", true);
+    catalogSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const hasCatalogFilters =
@@ -242,27 +178,23 @@ const Home = () => {
         <div>
           <p className="eyebrow">Storefront</p>
           <h1 className="page-title">Storefront</h1>
+          <p className="panel-copy">Browse products, catch the live flash sales, and shop the catalog by category or price.</p>
         </div>
       </div>
 
       {spotlightProducts.length > 0 && (
-        <FlashSaleSpotlight
-          containerRef={spotlightContainerRef}
-          onViewAll={handleViewAllFlashSales}
-          products={spotlightProducts}
-          slotCount={spotlightSlots}
-        />
+        <FlashSaleSpotlight onViewAll={handleViewAllFlashSales} products={spotlightProducts} />
       )}
 
-      <section className="catalog-section stack-page" ref={productListRef}>
+      <section className="stack-page" ref={catalogSectionRef}>
         <div className="section-heading">
           <div>
             <p className="eyebrow">Catalog</p>
-            <h2 className="section-title">Featured products</h2>
+            <h2 className="section-title">Products</h2>
             <p className="panel-copy">
               {filters.hasFlashSale
-                ? "Showing active flash-sale products sorted by the order you choose."
-                : "Browse the newest gadgets, category favorites, and everyday picks."}
+                ? "Showing only products with an active flash sale."
+                : "Use the filters below to narrow the current catalog."}
             </p>
           </div>
         </div>
@@ -329,7 +261,7 @@ const Home = () => {
         </section>
 
         {status === "loading" && (
-          <div className="status-panel">Loading products from MongoDB...</div>
+          <div className="status-panel">Loading products...</div>
         )}
 
         {status === "error" && (
@@ -342,8 +274,7 @@ const Home = () => {
               "No products match the current filters."
             ) : (
               <>
-                No products were found in the database. Add product documents in Atlas
-                or run <code>npm run seed</code>.
+                No products were found in the database. Run one of the Python seed scripts listed in the README.
               </>
             )}
           </div>

@@ -1,47 +1,113 @@
 # GadgetHub WebApps
 
-GadgetHub is a split-deployment MERN storefront:
+GadgetHub is an e-commerce demo project built with a React frontend and Node/Express backend, using MongoDB Atlas for data storage and AWS S3 for image hosting. It features a storefront with product browsing, search, filtering, and flash sales, as well as an admin interface for managing products and flash sales.
 
-- React frontend hosted on AWS Amplify
-- Express API hosted on AWS App Runner
-- MongoDB Atlas for products, users, carts, and orders
-- Amazon S3 for manager/admin product image uploads
+## Features
 
-## Implemented application surface
+- Public product browsing with search, category filters, price filters, sorting, and pagination
+- Product details with flash-sale pricing when a sale is active
+- Customer registration, login, cart management, checkout, and order history
+- Product manager catalog management, image uploads, and flash-sale scheduling
+- Admin product-manager account management
+- Automated tests with Vitest, React Testing Library, Supertest, Playwright, and `mongodb-memory-server`
 
-- Public product browsing with search, category filter, price filter, sorting, and pagination
-- Product details with effective flash-sale pricing
-- Customer registration, login, session restoration, cart, checkout, and order history
-- Product manager product creation, editing, deactivation, flash-sale configuration, and image upload support
-- Super-admin product-manager account management
-- MongoDB-backed cart, order, and product data model
-- Automated tests with Vitest, Supertest, React Testing Library, and mongodb-memory-server
+## Environment Setup
 
-## Local development
+Create a `.env` file in the project root with the values you need:
 
-1. Create `.env` from `.env.example`.
-2. Add a valid Atlas connection string to `MONGODB_URI`.
-3. Add a `JWT_SECRET`.
-4. Provide `AWS_REGION` and `S3_BUCKET_NAME` so seeded product images and manager uploads can be stored in S3. For local development, also provide either local AWS keys or an AWS profile.
-5. Install dependencies:
+```env
+# Main app database connection used by the Node/Express server
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/gadgethub?retryWrites=true&w=majority&appName=GadgetHub
+
+# Express server
+PORT=5000
+JWT_SECRET=replace-with-a-long-random-secret
+
+# Frontend origins and API base URL
+APP_ORIGIN=http://localhost:5173
+AMPLIFY_APP_ORIGIN=https://your-amplify-domain.amplifyapp.com
+VITE_API_BASE_URL=/api
+
+# S3 image upload settings used by both the app and the Python seed scripts
+AWS_REGION=us-west-2
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+S3_BUCKET_NAME=
+S3_PUBLIC_BASE_URL=
+
+# Optional bootstrap accounts created by the seed scripts
+SEED_SUPER_ADMIN_EMAIL=
+SEED_SUPER_ADMIN_PASSWORD=
+SEED_SUPER_ADMIN_NAME=GadgetHub Admin
+SEED_MANAGER_EMAIL=
+SEED_MANAGER_PASSWORD=
+SEED_MANAGER_NAME=GadgetHub Manager
+
+# Optional load-test seed data
+SEED_LOAD_TEST_PRODUCT=false
+LOAD_TEST_PRODUCT_SKU=GH-LOAD-FLASH-SALE
+
+# Optional Playwright and load-test configuration
+E2E_USE_LOCAL_SERVER=true
+E2E_BASE_URL=http://127.0.0.1:4173
+LOAD_TEST_BASE_URL=http://localhost:5000
+LOAD_TEST_USER_PREFIX=load-test-user
+LOAD_TEST_USER_PASSWORD=ChangeMe123!
+LOAD_TEST_VUS=10
+LOAD_TEST_DURATION=15s
+LOAD_TEST_PAUSE_MS=1000
+LOAD_TEST_REQUEST_TIMEOUT_MS=5000
+```
+
+### Required environment variables to run:
+
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `APP_ORIGIN` (for local development)
+
+### Required for seeding DB
+
+- `AWS_REGION`
+- `S3_BUCKET_NAME`
+- working AWS credentials through env vars
+- `MONGODB_URI`
+
+Python seed scripts upload the tracked files in `public/seed-images` to S3 first, then store the resulting image URLs in MongoDB.
+
+## MongoDB Notes
+
+- Atlas is the intended database setup for this project.
+- Both the app and the Atlas seed script read `MONGODB_URI`.
+
+## Install And Run
+
+Install the Node dependencies:
 
 ```bash
 npm install
 ```
 
-6. Seed the database with products and bootstrap admin users:
+Create and activate a local virtual environment for the Python seed scripts:
 
 ```bash
-npm run seed
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
 ```
 
-7. Start the backend:
+If you open a new terminal later, reactivate it with:
+
+```bash
+source .venv/bin/activate
+```
+
+Start the backend:
 
 ```bash
 npm run server
 ```
 
-8. Start the frontend in a second terminal:
+Start the frontend in a second terminal:
 
 ```bash
 npm run dev
@@ -49,209 +115,44 @@ npm run dev
 
 The Vite dev server proxies `/api` requests to `http://localhost:5000`.
 
-## Key scripts
+## Python Seed Commands
+
+Seed MongoDB Atlas:
+
+```bash
+python3 server/seed_atlas.py
+```
+
+What the seed scripts do:
+
+- generate the 50-product demo catalog
+- upload each seed image to S3
+- upsert products into MongoDB with the uploaded image URL
+- optionally create the bootstrap admin accounts from `SEED_*`
+- optionally create the dedicated flash-sale load-test product when `SEED_LOAD_TEST_PRODUCT=true`
+
+## Main Scripts
 
 ```bash
 npm run dev
 npm run server
-npm run seed
-npm run lint
-npm run build
+```
+
+## Testing
+
+```bash
 npm test
+npm run build
 npm run test:e2e
 npm run load:flash-sale
+npm run lint
 ```
 
 `npm run test:e2e` starts the Vite storefront automatically on `http://127.0.0.1:4173` unless `E2E_USE_LOCAL_SERVER=false`, in which case Playwright targets `E2E_BASE_URL` directly.
 
-`npm run load:flash-sale` prefers the `k6` CLI when it is installed. If `k6` is not on `PATH`, the repo falls back to a built-in Node runner. Both runners bootstrap staging customers, reset carts, add the dedicated load-test SKU, and then attempt checkout.
+## Deployment Notes
 
-## Environment variables
-
-```env
-MONGODB_URI=mongodb+srv://...
-PORT=5000
-JWT_SECRET=replace-with-a-long-random-secret
-APP_ORIGIN=http://localhost:5173
-AMPLIFY_APP_ORIGIN=https://your-app.amplifyapp.com
-VITE_API_BASE_URL=/api
-E2E_USE_LOCAL_SERVER=true
-E2E_BASE_URL=http://127.0.0.1:4173
-SEED_LOAD_TEST_PRODUCT=false
-LOAD_TEST_BASE_URL=http://localhost:5000
-LOAD_TEST_USER_PREFIX=load-test-user
-LOAD_TEST_USER_PASSWORD=ChangeMe123!
-LOAD_TEST_PRODUCT_SKU=GH-LOAD-FLASH-SALE
-AWS_REGION=us-west-2
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-S3_BUCKET_NAME=
-S3_PUBLIC_BASE_URL=
-SEED_SUPER_ADMIN_EMAIL=admin@gadgethub.local
-SEED_SUPER_ADMIN_PASSWORD=ChangeMe123!
-SEED_SUPER_ADMIN_NAME=GadgetHub Admin
-SEED_MANAGER_EMAIL=manager@gadgethub.local
-SEED_MANAGER_PASSWORD=ChangeMe123!
-SEED_MANAGER_NAME=GadgetHub Manager
-```
-
-In App Runner, prefer IAM roles and runtime secrets over static AWS keys. Set `S3_PUBLIC_BASE_URL` only when product images should be served through CloudFront or another public asset domain instead of direct S3 object URLs.
-
-Optional load-test tuning variables:
-
-```env
-LOAD_TEST_VUS=10
-LOAD_TEST_DURATION=15s
-LOAD_TEST_PAUSE_MS=1000
-LOAD_TEST_REQUEST_TIMEOUT_MS=5000
-```
-
-## Backend API summary
-
-### Public
-
-- `GET /api/health`
-- `GET /api/products`
-- `GET /api/products/:id`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-
-### Authenticated customer
-
-- `GET /api/auth/me`
-- `GET /api/cart`
-- `POST /api/cart/items`
-- `PATCH /api/cart/items/:productId`
-- `DELETE /api/cart/items/:productId`
-- `DELETE /api/cart`
-- `POST /api/checkout`
-- `GET /api/orders`
-- `GET /api/orders/:id`
-
-### Product manager / super admin
-
-- `POST /api/products`
-- `PATCH /api/products/:id`
-- `POST /api/upload`
-
-### Super admin
-
-- `GET /api/admin/product-managers`
-- `POST /api/admin/product-managers`
-- `PATCH /api/admin/product-managers/:id`
-
-## MongoDB model summary
-
-### Product
-
-- `name`
-- `description`
-- `category`
-- `price`
-- `image`
-- `stockQty`
-- `sku`
-- `isActive`
-- `flashSale.enabled`
-- `flashSale.salePrice`
-- `flashSale.startsAt`
-- `flashSale.endsAt`
-- `flashSale.saleStockQty`
-
-### User
-
-- `email`
-- `passwordHash`
-- `displayName`
-- `role`
-- `isActive`
-
-### Cart
-
-- `userId`
-- `items[{ productId, quantity }]`
-
-### Order
-
-- `userId`
-- `status`
-- `items[{ productId, nameSnapshot, imageSnapshot, unitPriceSnapshot, quantity, lineTotal, usedFlashSale }]`
-- `subtotal`
-- `total`
-- `placedAt`
-
-## AWS deployment shape
-
-### Amplify frontend
-
-- `amplify.yml` pins Node `22.12.0`, installs dependencies, builds the SPA, and publishes `dist`
-- Add the SPA rewrite rule for client-side routing
-- Set `VITE_API_BASE_URL=https://<app-runner-domain>/api`
-
-### App Runner backend
-
-- Use the root `apprunner.yaml`
-- Source directory should be the repository root
-- Inject `MONGODB_URI`, `JWT_SECRET`, `APP_ORIGIN`, `AMPLIFY_APP_ORIGIN`, `AWS_REGION`, and `S3_BUCKET_NAME`
-- Prefer an IAM role for S3 access
-- Use `/api/health` for smoke checks
-
-### Atlas and S3
-
-- Atlas should allow the App Runner service to connect and should contain the seeded GadgetHub database
-- S3 should expose uploaded product images publicly or through CloudFront
-
-## Manual live staging testing
-
-Manual live testing should be run from a developer machine against staging URLs. Do not use production for Playwright or flash-sale load tests.
-
-### Live storefront smoke test
-
-Run Playwright directly against the deployed staging frontend:
-
-```bash
-E2E_USE_LOCAL_SERVER=false \
-E2E_BASE_URL=https://<staging-amplify-domain> \
-npm run test:e2e
-```
-
-### Live API smoke test
-
-Check the deployed backend health endpoint before running heavier tests:
-
-```bash
-curl https://<staging-app-runner-domain>/api/health
-```
-
-### Live flash-sale load test
-
-Seed the dedicated product into staging once:
-
-```bash
-SEED_LOAD_TEST_PRODUCT=true LOAD_TEST_PRODUCT_SKU=GH-LOAD-FLASH-SALE npm run seed
-```
-
-Then run the load test from your machine against the staging backend:
-
-```bash
-LOAD_TEST_BASE_URL=https://<staging-app-runner-domain> \
-LOAD_TEST_USER_PASSWORD='<staging-password>' \
-LOAD_TEST_PRODUCT_SKU=GH-LOAD-FLASH-SALE \
-npm run load:flash-sale
-```
-
-### Staging data policy
-
-- Keep Playwright deployed-mode and flash-sale load testing on staging only
-- Seed the dedicated staging product with `SEED_LOAD_TEST_PRODUCT=true npm run seed`
-- The default staged load-test SKU is `GH-LOAD-FLASH-SALE`
-- Staging user, cart, and order data generated by load tests is disposable
-
-## Local validation
-
-- Use Node `22.12.0` or newer within the repo’s supported range
-- Run `npm run lint`
-- Run `npm test`
-- Run `npm run build`
-- Run `npm run test:e2e` for local storefront checks
-- Run the manual live staging commands above when you want to test deployed services
+- Frontend hosting is configured for AWS Amplify through `amplify.yml`.
+- Backend hosting is configured for AWS App Runner through `apprunner.yaml`.
+- S3 remains the image host for manager uploads and seeded product media.
+- Atlas remains the recommended production database target because the checkout flow uses MongoDB transactions.

@@ -7,6 +7,8 @@ import { AuthContext } from "../context/authContextValue";
 import * as cartApi from "../services/cartApi";
 import * as productApi from "../services/productApi";
 
+const scrollIntoViewMock = vi.fn();
+
 vi.mock("../services/productApi", () => ({
   getProducts: vi.fn(),
 }));
@@ -89,7 +91,8 @@ const renderHome = () =>
 describe("Home page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
+    scrollIntoViewMock.mockReset();
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
     vi.mocked(productApi.getProducts).mockImplementation((params = {}) => {
       if (params.limit) {
         return Promise.resolve(flashSaleResponse);
@@ -157,7 +160,31 @@ describe("Home page", () => {
     });
   });
 
-  it("applies the flash-sale filter and scrolls to the catalog when the spotlight CTA is used", async () => {
+  it("selecting ending soon keeps the catalog in flash-sale mode", async () => {
+    const user = userEvent.setup();
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.getByText("Nova Phone Core")).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /sort/i }), "ending_soon");
+
+    await waitFor(() => {
+      expect(productApi.getProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          hasFlashSale: true,
+          sort: "ending_soon",
+          page: 1,
+        })
+      );
+    });
+
+    expect(screen.getByRole("checkbox", { name: /flash sale only/i })).toBeChecked();
+  });
+
+  it("applies the flash-sale filter when the spotlight CTA is used", async () => {
     const user = userEvent.setup();
 
     renderHome();
@@ -174,8 +201,8 @@ describe("Home page", () => {
       );
     });
 
-    expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
     expect(screen.getByRole("checkbox", { name: /flash sale only/i })).toBeChecked();
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
   });
 
   it("hides the spotlight when there are no active flash-sale products", async () => {

@@ -181,11 +181,11 @@ export const serializeProduct = (product, viewerRole = "guest") => {
 };
 
 const sortMap = {
-  newest: { createdAt: -1 },
-  ending_soon: { "flashSale.endsAt": 1, createdAt: -1 },
-  price_asc: { price: 1 },
-  price_desc: { price: -1 },
-  name_asc: { name: 1 },
+  newest: "newest",
+  ending_soon: "ending_soon",
+  price_asc: "price_asc",
+  price_desc: "price_desc",
+  name_asc: "name_asc",
 };
 
 const canUseAdminInventoryView = (query, viewerRole = "guest") =>
@@ -238,18 +238,6 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
   const minPrice = parseNumber(query.minPrice);
   const maxPrice = parseNumber(query.maxPrice);
 
-  if (minPrice !== null || maxPrice !== null) {
-    filters.price = {};
-
-    if (minPrice !== null) {
-      filters.price.$gte = minPrice;
-    }
-
-    if (maxPrice !== null) {
-      filters.price.$lte = maxPrice;
-    }
-  }
-
   if (query.search?.trim()) {
     const regex = new RegExp(query.search.trim(), "i");
     filters.$or = [{ name: regex }, { description: regex }, { category: regex }];
@@ -261,20 +249,75 @@ export const buildProductListOptions = (query, viewerRole = "guest") => {
     limit,
     skip: (page - 1) * limit,
     sort,
+    minPrice,
+    maxPrice,
   };
 };
 
+const getEffectiveListPrice = (product, now = new Date()) => {
+  const activeFlashSale = getActiveFlashSale(product, now);
+  return activeFlashSale ? activeFlashSale.salePrice : product.price;
+};
+
+const compareDatesDesc = (left, right) => {
+  const leftValue = new Date(left || 0).getTime();
+  const rightValue = new Date(right || 0).getTime();
+  return rightValue - leftValue;
+};
+
+const compareNamesAsc = (left, right) => `${left || ""}`.localeCompare(`${right || ""}`);
+
+const sortProducts = (products, sortKey, now) =>
+  [...products].sort((left, right) => {
+    switch (sortKey) {
+      case "price_asc": {
+        const difference = getEffectiveListPrice(left, now) - getEffectiveListPrice(right, now);
+        return difference || compareNamesAsc(left.name, right.name);
+      }
+      case "price_desc": {
+        const difference = getEffectiveListPrice(right, now) - getEffectiveListPrice(left, now);
+        return difference || compareNamesAsc(left.name, right.name);
+      }
+      case "name_asc":
+        return compareNamesAsc(left.name, right.name);
+      case "ending_soon": {
+        const difference =
+          new Date(left.flashSale?.endsAt || 0).getTime() - new Date(right.flashSale?.endsAt || 0).getTime();
+        return difference || compareDatesDesc(left.createdAt, right.createdAt);
+      }
+      case "newest":
+      default:
+        return compareDatesDesc(left.createdAt, right.createdAt);
+    }
+  });
+
 export const listProducts = async (query, viewerRole = "guest") => {
-  const { filters, page, limit, skip, sort } = buildProductListOptions(query, viewerRole);
+  const { filters, page, limit, skip, sort, minPrice, maxPrice } = buildProductListOptions(query, viewerRole);
   const categoryFilters = buildVisibilityFilters(query, viewerRole);
-  const [products, total, categories] = await Promise.all([
-    Product.find(filters).sort(sort).skip(skip).limit(limit).lean(),
-    Product.countDocuments(filters),
+  const now = new Date();
+  const [products, categories] = await Promise.all([
+    Product.find(filters).lean(),
     Product.distinct("category", categoryFilters),
   ]);
+  const filteredProducts = products.filter((product) => {
+    const effectivePrice = getEffectiveListPrice(product, now);
+
+    if (minPrice !== null && effectivePrice < minPrice) {
+      return false;
+    }
+
+    if (maxPrice !== null && effectivePrice > maxPrice) {
+      return false;
+    }
+
+    return true;
+  });
+  const sortedProducts = sortProducts(filteredProducts, sort, now);
+  const paginatedProducts = sortedProducts.slice(skip, skip + limit);
+  const total = filteredProducts.length;
 
   return {
-    items: products.map((product) => serializeProduct(product, viewerRole)),
+    items: paginatedProducts.map((product) => serializeProduct(product, viewerRole)),
     meta: {
       page,
       limit,

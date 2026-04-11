@@ -18,11 +18,12 @@ lerna-debug.log*
 # Test and coverage output
 coverage/
 .nyc_output/
+test-results/
 
 # Environment files
 .env
 .env.*
-!.env.example
+.venv
 
 # Local config files
 *.local
@@ -45,3 +46,8 @@ Thumbs.db
 # Misc
 *.tmp
 *.temp
+__pycache__/
+*.pyc
+
+# Personal files
+personal_files/

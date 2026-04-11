@@ -1,39 +1,113 @@
 # GadgetHub WebApps
 
-This project now has a simple full-stack path for MongoDB Atlas:
+GadgetHub is an e-commerce demo project built with a React frontend and Node/Express backend, using MongoDB Atlas for data storage and AWS S3 for image hosting. It features a storefront with product browsing, search, filtering, and flash sales, as well as an admin interface for managing products and flash sales.
 
-- React frontend in `src/`
-- Express API in `server/`
-- MongoDB Atlas connection through Mongoose
+## Features
 
-## Important
+- Public product browsing with search, category filters, price filters, sorting, and pagination
+- Product details with flash-sale pricing when a sale is active
+- Customer registration, login, cart management, checkout, and order history
+- Product manager catalog management, image uploads, and flash-sale scheduling
+- Admin product-manager account management
+- Automated tests with Vitest, React Testing Library, Supertest, Playwright, and `mongodb-memory-server`
 
-The MongoDB VS Code extension does not connect your app by itself. It only lets you inspect the database. Your application still needs a backend that uses the Atlas connection string.
+## Environment Setup
 
-## Setup
+Create a `.env` file in the project root with the values you need:
 
-1. Create a `.env` file in the project root from `.env.example`.
-2. Paste your Atlas connection string into `MONGODB_URI`.
-3. Make sure your Atlas cluster allows your IP address and that your database user has read/write access.
-4. Install dependencies:
+```env
+# Main app database connection used by the Node/Express server
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/gadgethub?retryWrites=true&w=majority&appName=GadgetHub
+
+# Express server
+PORT=5000
+JWT_SECRET=replace-with-a-long-random-secret
+
+# Frontend origins and API base URL
+APP_ORIGIN=http://localhost:5173
+AMPLIFY_APP_ORIGIN=https://your-amplify-domain.amplifyapp.com
+VITE_API_BASE_URL=/api
+
+# S3 image upload settings used by both the app and the Python seed scripts
+AWS_REGION=us-west-2
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+S3_BUCKET_NAME=
+S3_PUBLIC_BASE_URL=
+
+# Optional bootstrap accounts created by the seed scripts
+SEED_SUPER_ADMIN_EMAIL=
+SEED_SUPER_ADMIN_PASSWORD=
+SEED_SUPER_ADMIN_NAME=GadgetHub Admin
+SEED_MANAGER_EMAIL=
+SEED_MANAGER_PASSWORD=
+SEED_MANAGER_NAME=GadgetHub Manager
+
+# Optional load-test seed data
+SEED_LOAD_TEST_PRODUCT=false
+LOAD_TEST_PRODUCT_SKU=GH-LOAD-FLASH-SALE
+
+# Optional Playwright and load-test configuration
+E2E_USE_LOCAL_SERVER=true
+E2E_BASE_URL=http://127.0.0.1:4173
+LOAD_TEST_BASE_URL=http://localhost:5000
+LOAD_TEST_USER_PREFIX=load-test-user
+LOAD_TEST_USER_PASSWORD=ChangeMe123!
+LOAD_TEST_VUS=10
+LOAD_TEST_DURATION=15s
+LOAD_TEST_PAUSE_MS=1000
+LOAD_TEST_REQUEST_TIMEOUT_MS=5000
+```
+
+### Required environment variables to run:
+
+- `MONGODB_URI`
+- `JWT_SECRET`
+- `APP_ORIGIN` (for local development)
+
+### Required for seeding DB
+
+- `AWS_REGION`
+- `S3_BUCKET_NAME`
+- working AWS credentials through env vars
+- `MONGODB_URI`
+
+Python seed scripts upload the tracked files in `public/seed-images` to S3 first, then store the resulting image URLs in MongoDB.
+
+## MongoDB Notes
+
+- Atlas is the intended database setup for this project.
+- Both the app and the Atlas seed script read `MONGODB_URI`.
+
+## Install And Run
+
+Install the Node dependencies:
 
 ```bash
 npm install
 ```
 
-5. Seed starter data if you want sample products:
+Create and activate a local virtual environment for the Python seed scripts:
 
 ```bash
-npm run seed
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
 ```
 
-6. Start the API:
+If you open a new terminal later, reactivate it with:
+
+```bash
+source .venv/bin/activate
+```
+
+Start the backend:
 
 ```bash
 npm run server
 ```
 
-7. Start the frontend in a second terminal:
+Start the frontend in a second terminal:
 
 ```bash
 npm run dev
@@ -41,60 +115,44 @@ npm run dev
 
 The Vite dev server proxies `/api` requests to `http://localhost:5000`.
 
-## AWS App Runner
+## Python Seed Commands
 
-This repository is now set up for a single App Runner service:
-
-- `npm run build` creates the React app in `dist/`
-- `npm run start` starts Express
-- Express serves both the frontend and the `/api` routes
-- `apprunner.yaml` configures the App Runner build and run steps from the repository root
-
-### App Runner setup
-
-1. In App Runner, choose a source-code deployment from your GitHub repository.
-2. Use the repository root as the source directory so App Runner picks up `apprunner.yaml`.
-3. Add `MONGODB_URI` as a runtime environment variable or, preferably, a Secrets Manager secret.
-4. Keep the service port at App Runner's default `8080`.
-
-### Notes
-
-- The frontend uses a relative `/api` base path in production, so it works when the UI and API are served from the same App Runner service.
-- `vite.config.js` only affects local development. The Vite proxy is not used in App Runner production.
-- If you test the combined app locally, run:
+Seed MongoDB Atlas:
 
 ```bash
+python3 server/seed_atlas.py
+```
+
+What the seed scripts do:
+
+- generate the 50-product demo catalog
+- upload each seed image to S3
+- upsert products into MongoDB with the uploaded image URL
+- optionally create the bootstrap admin accounts from `SEED_*`
+- optionally create the dedicated flash-sale load-test product when `SEED_LOAD_TEST_PRODUCT=true`
+
+## Main Scripts
+
+```bash
+npm run dev
+npm run server
+```
+
+## Testing
+
+```bash
+npm test
 npm run build
-npm run start
+npm run test:e2e
+npm run load:flash-sale
+npm run lint
 ```
 
-## Environment Variables
+`npm run test:e2e` starts the Vite storefront automatically on `http://127.0.0.1:4173` unless `E2E_USE_LOCAL_SERVER=false`, in which case Playwright targets `E2E_BASE_URL` directly.
 
-```env
-MONGODB_URI=your-atlas-connection-string
-PORT=5000
-VITE_API_BASE_URL=/api
-```
+## Deployment Notes
 
-## API Endpoints
-
-- `GET /api/health`
-- `GET /api/products`
-- `GET /api/products/:id`
-
-## Current Data Model
-
-Products are stored in MongoDB with fields such as:
-
-- `name`
-- `description`
-- `price`
-- `image`
-- `category`
-- `inStock`
-
-## Next Step Ideas
-
-- Store cart data per user in MongoDB
-- Add create/update/delete product routes for an admin page
-- Move image URLs to a CDN or cloud storage instead of local placeholders
+- Frontend hosting is configured for AWS Amplify through `amplify.yml`.
+- Backend hosting is configured for AWS App Runner through `apprunner.yaml`.
+- S3 remains the image host for manager uploads and seeded product media.
+- Atlas remains the recommended production database target because the checkout flow uses MongoDB transactions.

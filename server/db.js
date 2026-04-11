@@ -9,7 +9,7 @@ const connectToDatabase = async () => {
 
   if (/[<][^>]+[>]/.test(mongoUri)) {
     throw new Error(
-      "MONGODB_URI still contains placeholder values. Replace <username>, <password>, and <cluster-url> with your real MongoDB Atlas connection string."
+      "MONGODB_URI still contains placeholder values. Replace them with a real MongoDB connection string. Atlas is recommended, but a local replica-set URI also works."
     );
   }
 

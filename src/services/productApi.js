@@ -1,21 +1,22 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+import { apiRequest, buildQueryString } from "./apiClient";
 
-const readResponse = async (response) => {
-  const data = await response.json().catch(() => null);
+export const getProducts = (params = {}, token) =>
+  apiRequest(`/products${buildQueryString(params)}`, { token });
 
-  if (!response.ok) {
-    throw new Error(data?.message || "Request failed.");
-  }
+export const getProductById = (id) => apiRequest(`/products/${id}`);
 
-  return data;
-};
+export const createProduct = (token, body) =>
+  apiRequest("/products", { method: "POST", token, body });
 
-export const getProducts = async () => {
-  const response = await fetch(`${API_BASE_URL}/products`);
-  return readResponse(response);
-};
+export const updateProduct = (token, id, body) =>
+  apiRequest(`/products/${id}`, { method: "PATCH", token, body });
 
-export const getProductById = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`);
-  return readResponse(response);
+export const deleteProduct = (token, id) =>
+  apiRequest(`/products/${id}`, { method: "DELETE", token });
+
+export const uploadProductImage = (token, file) => {
+  const body = new FormData();
+  body.append("image", file);
+
+  return apiRequest("/upload", { method: "POST", token, body });
 };
